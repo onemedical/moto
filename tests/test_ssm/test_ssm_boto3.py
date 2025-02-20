@@ -222,6 +222,7 @@ def test_put_parameter(name):
     )
 
     assert response["Version"] == 1
+    assert response["Tier"] == "Standard"
 
     response = client.get_parameters(Names=[name], WithDecryption=False)
 
@@ -404,6 +405,30 @@ def test_put_parameter_overwrite_preserves_metadata(name):
             "PolicyType": "Expiration",
         }
     ]
+
+
+@pytest.mark.parametrize("name", ["test", "my-cool-parameter"])
+@pytest.mark.parametrize("tier", ["Standard", "Advanced", "Intelligent-Tiering"])
+@mock_aws
+def test_put_parameter_with_tier(name, tier):
+    test_description = "A test parameter"
+    client = boto3.client("ssm", region_name=SSM_REGION)
+    response = client.put_parameter(
+        Name=name,
+        Description=test_description,
+        Value="value",
+        Type="String",
+        Tier=tier,
+    )
+
+    assert response["Tier"] == tier
+
+    # Verify the response contains the tier
+    param = client.describe_parameters(
+        ParameterFilters=[{"Key": "Name", "Option": "Equals", "Values": [name]}]
+    )["Parameters"][0]
+
+    assert param["Tier"] == tier
 
 
 @mock_aws
